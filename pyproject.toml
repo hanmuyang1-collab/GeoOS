@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "geov-os"
-version = "0.1.0"
+version = "0.2.0"
 description = "GeoOS — a hobby operating system layer with geosh (unified shell) and geoVariable (binary sandboxed scripting language)"
 readme = "README.md"
 license = { text = "MIT" }

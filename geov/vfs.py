@@ -10,12 +10,12 @@ from pathlib import Path
 
 OS_RELEASE = """\
 NAME=GeoOS
-VERSION=0.1.0 (Geode)
+VERSION=0.2.0 (Geode)
 ID=geov
-KERNEL=geokernel 0.1.0
-SHELL=geosh 0.1
+KERNEL=geokernel 0.2.0
+SHELL=geosh 0.2
 SCRIPT=geoVariable 1 (binary, sandboxed)
-PRETTY_NAME="GeoOS 0.1.0 Geode"
+PRETTY_NAME="GeoOS 0.2.0 Geode"
 """
 
 WELCOME = """\
