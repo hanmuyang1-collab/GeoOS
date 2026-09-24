@@ -15,8 +15,25 @@ geov deploy                # launch the full desktop as an app (browser tab)
 ```
 
 `geov deploy` opens the GeoOS desktop in a new browser tab — your current OS
-stays one tab away, and the desktop even has a dedicated **Host OS** tab so you
-can check what's underneath and switch back.
+stays one tab away, and the desktop even has a dedicated **Host OS** window so
+you can check what's underneath and switch back.
+
+## The desktop
+
+A real windowed environment, not tabs: draggable, resizable, minimizable
+windows with a dock and desktop icons.
+
+| app | what it does |
+|---|---|
+| **Terminal** | geosh — unified Linux + PowerShell + macOS shell (open as many as you like) |
+| **Code Studio** | editor that creates **real local files**; runs `.gv` (sandboxed bytecode VM), `.py` (host Python), `.js` (Node), `.sh` (Bash) via the server |
+| **Files** | browse, edit, rename, delete the VFS |
+| **Monitor** | **live host telemetry** — real CPU %, memory, and the host process table from the kernel |
+| **Paint** | draw and save PNGs straight into the VFS |
+| **Calculator** | safe arithmetic (no `eval`) |
+| **Settings** | accent color + wallpaper, persisted on the host at `~/.geovos/settings.json` |
+| **Help & Docs** | built-in manual |
+| **Host OS** | your real machine — the layer GeoOS floats above |
 
 ## What's inside
 
@@ -26,8 +43,9 @@ can check what's underneath and switch back.
 | **geoVariable** | brand-new scripting language that compiles to real **binary bytecode** (`.gvb`) and runs in a sandboxed VM |
 | **VFS** | virtual filesystem rooted at `~/.geovos/vfs` — escape-proof |
 | **geopkg** | tiny package manager (`pkg list`, `pkg install cowsay`) |
-| **desktop** | web desktop: Terminal, Files, GeoVariable Studio, Monitor, Host OS tabs |
+| **window manager** | pure-JS windowing: drag, resize, minimize, maximize, focus stacking, dock |
 | **gevm** | the sandbox VM: instruction budget, stack cap, call-depth cap, zero host I/O |
+| **runtime bridge** | server-side execution of Python / JavaScript / Bash with timeouts, capped output and a jailed working directory |
 
 ## geoVariable in 30 seconds
 
@@ -90,6 +108,30 @@ geov reset                   wipe and reinstall the virtual filesystem
 geov info                    versions and paths
 ```
 
+## Server API (what makes it an OS)
+
+`geov deploy` starts a local server (`127.0.0.1` only) that the desktop apps
+talk to:
+
+```
+GET  /api/ping                 health + version
+GET  /api/host                 host machine info
+GET  /api/sysinfo              live host CPU %, memory, uptime, process table
+GET  /api/processes            top host processes by memory
+GET  /api/runtimes             which language runtimes the host provides
+GET  /api/settings             persisted desktop settings
+POST /api/settings             update settings (merged + saved)
+GET  /api/fs?path=             list a VFS directory
+GET  /api/file?path=[&raw=1]   read a VFS file (text or base64)
+POST /api/file                 write a VFS file (text or base64)
+POST /api/fsop                 mkdir / rm / rename inside the VFS
+POST /api/exec                 run a geosh command (session-scoped)
+POST /api/compile              .gv source -> .gvb hex + stats
+POST /api/run                  run .gv source or .gvb hex in the sandbox VM
+POST /api/runcode              run python/javascript/bash/geovariable with
+                               timeout, output caps and a jailed cwd
+```
+
 ## Repo layout
 
 ```
@@ -97,12 +139,12 @@ geov/
   cli.py             command line entry point
   shell.py           geosh — the unified command set + aliases
   vfs.py             virtual filesystem (sandboxed)
-  server.py          local desktop server + API
+  server.py          local OS server: telemetry, settings, multi-language code execution
   geovariable/
     compiler.py      .gv source -> .gvb binary (lexer, parser, codegen)
     vm.py            the sandbox VM
     format.py        the .gvb binary format
-  web/               the desktop app (vanilla JS, no build step)
+  web/               the windowed desktop (vanilla JS, no build step)
 docs/GEOVARIABLE.md  language + binary format spec
 examples/            hello.gv, fizzbuzz.gv, fib.gv
 ```
