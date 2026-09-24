@@ -363,9 +363,9 @@ class ShellSession:
         info = [
             f"user@geov-box",
             f"---------------",
-            f"OS: GeoOS 0.1.0 Geode",
-            f"Kernel: geokernel 0.1.0",
-            f"Shell: geosh 0.1",
+            f"OS: GeoOS 0.2.0 Geode",
+            f"Kernel: geokernel 0.2.0",
+            f"Shell: geosh 0.2",
             f"Script: geoVariable 1 (.gvb binary, sandboxed)",
             f"Host: {host} {platform.machine()}",
             f"Packages: {len(self.vfs.installed_pkgs())} installed",
@@ -381,7 +381,7 @@ class ShellSession:
         return "\n".join(lines)
 
     def cmd_about(self, args, stdin):
-        return ("GeoOS 0.1.0 (Geode) — a hobby OS layer written from scratch.\n"
+        return ("GeoOS 0.2.0 (Geode) — a hobby OS layer written from scratch.\n"
                 "Includes geosh (unified shell), the geoVariable binary\n"
                 "scripting language, a sandbox VM, and a web desktop.\n"
                 "Nothing here touches your real files outside ~/.geovos.")
@@ -479,7 +479,7 @@ class ShellSession:
             self.vfs.save_pkgs(installed)
             return f"removed {name}"
         if sub == "info":
-            return f"geopkg 0.1 — {len(PACKAGES)} packages in repo, {len(installed)} installed"
+            return f"geopkg 0.2 — {len(PACKAGES)} packages in repo, {len(installed)} installed"
         raise ShellError(f"pkg: unknown subcommand {sub!r}")
 
     def _cowsay(self, text):
@@ -506,7 +506,7 @@ class ShellSession:
     def cmd_help(self, args, stdin):
         rows = [
             ("FILES", "ls (-l -a), cd, pwd, cat, touch, mkdir, rm, cp, mv, find, grep, head, tail, wc, write, append, open"),
-            ("SYSTEM", "sysinfo, ps, kill, date, whoami, hostname, env, export, history, clear, geofetch, about"),
+            ("SYSTEM", "sysinfo, ps, kill, date, whoami, hostname, env, export, history, clear, geofetch, about, reset"),
             ("GEOVARIABLE", "run <x.gv|x.gvb>, gvc <x.gv> -o <x.gvb>, hexdump <file>"),
             ("PACKAGES", "pkg list, pkg install <name>, pkg remove <name>, pkg info"),
             ("OPERATORS", "pipes: ls | grep txt   chains: cd /; ls   redirects: echo hi > a.txt, >> appends"),
@@ -517,6 +517,25 @@ class ShellSession:
 
     def cmd_exit(self, args, stdin):
         return "\x1bEXIT\x1b"
+
+    def cmd_reset(self, args, stdin):
+        """reset --yes — wipe the VFS back to factory state."""
+        if "--yes" not in args:
+            return ("reset: this wipes the GeoOS filesystem back to factory state.\n"
+                    "run: reset --yes")
+        import shutil as _sh
+        root = self.vfs.root
+        for child in root.iterdir():
+            if child.is_dir():
+                _sh.rmtree(child, ignore_errors=True)
+            else:
+                try:
+                    child.unlink()
+                except OSError:
+                    pass
+        self.vfs.seed()
+        self.cwd = "/home/user"
+        return "GeoOS filesystem reset to factory state."
 
 
 # ------------------------------------------------------------------ tables
@@ -539,6 +558,7 @@ COMMANDS = {
     "gvc": ShellSession.cmd_gvc, "hexdump": ShellSession.cmd_hexdump,
     "pkg": ShellSession.cmd_pkg, "edit": ShellSession.cmd_edit,
     "open": ShellSession.cmd_open, "help": ShellSession.cmd_help,
+    "reset": ShellSession.cmd_reset,
     "exit": ShellSession.cmd_exit,
 }
 
