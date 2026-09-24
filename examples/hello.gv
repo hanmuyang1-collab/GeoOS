@@ -1,0 +1,7 @@
+# hello.gv - your first geoVariable script
+let name = "GeoOS user"
+print("hello " + name + "!")
+
+let lucky = 7
+print("lucky number:", lucky)
+print("double lucky:", lucky * 2)

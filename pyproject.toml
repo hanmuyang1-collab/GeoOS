@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "geov-os"
+version = "0.1.0"
+description = "GeoOS — a hobby operating system layer with geosh (unified shell) and geoVariable (binary sandboxed scripting language)"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+authors = [{ name = "GeoThink" }]
+keywords = ["os", "toy-os", "shell", "bytecode", "scripting-language", "sandbox"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Operating System",
+]
+# zero runtime dependencies — pure Python standard library
+dependencies = []
+
+[project.scripts]
+geov = "geov.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/hanmuyang1-collab/GeoOS"
+
+[tool.setuptools.packages.find]
+include = ["geov*"]
+
+[tool.setuptools.package-data]
+geov = ["web/**/*", "web/*"]

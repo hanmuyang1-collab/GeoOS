@@ -1,0 +1,10 @@
+# guess.gv - a tiny number guessing game (use inside `geov shell` or CLI
+# where input() is wired to your keyboard; in the sandbox it reads empty)
+let secret = 42
+print("I picked a number between 1 and 100.")
+let guess = num(input("your guess: "))
+if guess == secret {
+    print("you got it!")
+} else {
+    print("nope, it was", secret)
+}
