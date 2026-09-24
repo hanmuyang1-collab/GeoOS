@@ -7,7 +7,7 @@
 <link rel="icon" href="assets/logo.png">
 <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-accent="cyan">
 <div id="boot">
   <img src="assets/logo.png" onerror="this.onerror=null;this.src='assets/logo.svg'" alt="GeoOS" class="boot-logo">
   <div class="boot-text">GeoOS</div>
@@ -17,177 +17,32 @@
 
 <div id="desktop" hidden>
   <header id="menubar">
-    <div class="brand" onclick="showTab('desktop')">
+    <div class="brand" id="brand-btn" title="Show desktop">
       <img src="assets/logo.png" onerror="this.onerror=null;this.src='assets/logo.svg'" alt=""> <span>GeoOS</span>
     </div>
-    <nav id="tabs">
-      <button data-tab="desktop" class="tab active">Desktop</button>
-      <button data-tab="terminal" class="tab">Terminal</button>
-      <button data-tab="files" class="tab">Files</button>
-      <button data-tab="studio" class="tab">GeoVariable Studio</button>
-      <button data-tab="monitor" class="tab">Monitor</button>
-    </nav>
+    <span class="menubar-app" id="menubar-app">Desktop</span>
     <div class="menubar-right">
       <span id="demo-badge" class="demo-badge" hidden>DEMO — run geov deploy</span>
-      <button id="host-btn" title="Switch to your current OS">Host OS &#x29C9;</button>
+      <button id="host-btn" title="Your current OS">Host OS &#x29C9;</button>
       <span id="clock"></span>
     </div>
   </header>
 
-  <main id="content">
+  <main id="screen" data-wp="nebula">
+    <div id="icons"></div>
+    <div id="winlayer"></div>
 
-    <!-- ============================ DESKTOP ============================ -->
-    <section id="tab-desktop" class="pane active">
-      <div class="wallpaper">
-        <div class="icons">
-          <div class="icon" ondblclick="showTab('terminal')" onclick="iconTap('terminal')">
-            <div class="icon-glyph term-glyph">&gt;_</div><span>Terminal</span>
-          </div>
-          <div class="icon" ondblclick="showTab('files')" onclick="iconTap('files')">
-            <div class="icon-glyph files-glyph">&#128193;</div><span>Files</span>
-          </div>
-          <div class="icon" ondblclick="showTab('studio')" onclick="iconTap('studio')">
-            <div class="icon-glyph studio-glyph">.gv</div><span>Studio</span>
-          </div>
-          <div class="icon" ondblclick="showTab('monitor')" onclick="iconTap('monitor')">
-            <div class="icon-glyph mon-glyph">&#9632;</div><span>Monitor</span>
-          </div>
-        </div>
-        <div class="desktop-hint">
-          <h1>Welcome to GeoOS</h1>
-          <p>A hobby OS running sandboxed on your machine. Open the Terminal and type <code>help</code>,
-             or write binary scripts in <code>geoVariable</code> inside the Studio.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============================ TERMINAL ============================ -->
-    <section id="tab-terminal" class="pane">
-      <div class="term-wrap">
-        <div id="term-out" class="term-out"></div>
-        <div class="term-input-row">
-          <span id="term-prompt" class="term-prompt">user@geov:~$</span>
-          <input id="term-in" class="term-in" autocomplete="off" spellcheck="false" placeholder="type 'help' ...">
-        </div>
-      </div>
-    </section>
-
-    <!-- ============================ FILES ============================ -->
-    <section id="tab-files" class="pane">
-      <div class="files-layout">
-        <div class="files-side">
-          <div class="files-crumbs">
-            <button onclick="fsUp()">&#8593;</button>
-            <span id="fs-path">/</span>
-            <button onclick="fsRefresh()">&#x21bb;</button>
-          </div>
-          <div id="fs-list" class="fs-list"></div>
-        </div>
-        <div class="files-main">
-          <div class="files-toolbar">
-            <span id="fs-file-name">no file open</span>
-            <span class="spacer"></span>
-            <button onclick="fsNew()">New file</button>
-            <button id="fs-save" onclick="fsSave()" disabled>Save</button>
-          </div>
-          <textarea id="fs-editor" class="fs-editor" placeholder="select a file, or create a new one" disabled></textarea>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============================ STUDIO ============================ -->
-    <section id="tab-studio" class="pane">
-      <div class="studio-layout">
-        <div class="studio-left">
-          <div class="studio-toolbar">
-            <span class="studio-title">geoVariable source</span>
-            <span class="spacer"></span>
-            <select id="gv-examples">
-              <option value="">examples...</option>
-              <option value="hello">hello.gv</option>
-              <option value="fizzbuzz">fizzbuzz.gv</option>
-              <option value="fib">fib.gv (recursion)</option>
-              <option value="loops">loops + break/continue</option>
-            </select>
-          </div>
-          <textarea id="gv-src" class="gv-src" spellcheck="false"># welcome to geoVariable
-# a tiny language that compiles to real binary bytecode (.gvb)
-
-let name = "GeoOS"
-print("hello from " + name + "!")
-
-for i in 1..5 {
-    print("line", i)
-}
-
-fn square(x) { return x * x }
-print("9 squared is", square(9))</textarea>
-          <div class="studio-actions">
-            <button class="btn-primary" onclick="gvCompile()">Compile to binary</button>
-            <button class="btn-primary" onclick="gvRun(true)">Run (sandboxed)</button>
-            <button onclick="gvHex()">Hex view</button>
-            <span id="gv-status" class="gv-status"></span>
-          </div>
-        </div>
-        <div class="studio-right">
-          <div class="pane-title">output</div>
-          <pre id="gv-out" class="gv-out">compile or run something...</pre>
-          <div class="pane-title">binary (.gvb)</div>
-          <pre id="gv-bin" class="gv-bin">GEVB binary will appear here after compiling</pre>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============================ MONITOR ============================ -->
-    <section id="tab-monitor" class="pane">
-      <div class="monitor-grid">
-        <div class="card">
-          <h3>geokernel CPU</h3>
-          <canvas id="cpu-graph" width="360" height="90"></canvas>
-          <div class="stat" id="cpu-stat">--</div>
-        </div>
-        <div class="card">
-          <h3>memory</h3>
-          <canvas id="mem-graph" width="360" height="90"></canvas>
-          <div class="stat" id="mem-stat">--</div>
-        </div>
-        <div class="card procs-card">
-          <h3>processes</h3>
-          <table class="procs">
-            <thead><tr><th>PID</th><th>NAME</th><th>CPU%</th><th>MEM MB</th></tr></thead>
-            <tbody id="proc-list"></tbody>
-          </table>
-        </div>
-        <div class="card">
-          <h3>system</h3>
-          <div id="sys-info" class="sys-info">loading...</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============================ HOST OS ============================ -->
-    <section id="tab-host" class="pane">
-      <div class="host-wrap">
-        <div class="host-card">
-          <h2>&#x29C9; Your current OS</h2>
-          <p class="host-sub">GeoOS runs sandboxed on top of this system. Nothing GeoOS does can touch it.</p>
-          <table class="host-table" id="host-table"></table>
-          <div class="host-actions">
-            <button class="btn-primary" onclick="showTab('desktop')">&#8592; Back to GeoOS</button>
-          </div>
-        </div>
-      </div>
-    </section>
-
+    <div id="welcome" class="welcome-card">
+      <h1>Welcome to GeoOS</h1>
+      <p>A hobby OS running sandboxed on your machine. Double-click an icon to open an app —
+         windows drag, resize, minimize and stack like a real desktop.</p>
+      <p class="welcome-tips">Try <b>Terminal</b> &rarr; <code>help</code> &nbsp;·&nbsp;
+         <b>Code Studio</b> &rarr; write geoVariable or Python and press <b>Run</b></p>
+      <button class="btn-primary" onclick="document.getElementById('welcome').style.display='none'">Get started</button>
+    </div>
   </main>
 
-  <footer id="dock">
-    <span class="dock-item" onclick="showTab('terminal')">geosh</span>
-    <span class="dock-item" onclick="showTab('studio')">geoVariable 1</span>
-    <span class="dock-item">geokernel 0.1.0</span>
-    <span class="spacer"></span>
-    <span class="dock-item dim" id="dock-status">sandboxed</span>
-  </footer>
+  <footer id="dock"></footer>
 </div>
 
 <script src="app.js"></script>
