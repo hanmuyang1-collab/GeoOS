@@ -273,6 +273,69 @@ window.addEventListener("load", async () => {
   }, 1300);
 });
 
-/* ============================ app registry ============================ */
-const APPS = {
-  terminal: { title: "Terminal", glyph: "&gt;_
+
+/* ============================ terminal app ============================ */
+function mountTerminal(body, win) {
+  body.innerHTML =
+    `<div class="term-wrap"><div class="term-out"></div>` +
+    `<div class="term-input-row"><span class="term-prompt"></span>` +
+    `<input class="term-in" autocomplete="off" spellcheck="false" placeholder="type 'help' ..."></div></div>`;
+  const out = body.querySelector(".term-out");
+  const inp = body.querySelector(".term-in");
+  const promptEl = body.querySelector(".term-prompt");
+  const session = win.wid;
+  let cwd = "/home/user";
+  const hist = []; let histIdx = -1;
+
+  const print = (text, cls) => {
+    const span = document.createElement("span");
+    if (cls) span.className = cls;
+    span.textContent = text + (text.endsWith("\n") ? "" : "\n");
+    out.appendChild(span);
+    out.scrollTop = out.scrollHeight;
+  };
+  const promptText = () => {
+    const short = cwd === "/home/user" ? "~" : cwd.replace("/home/user", "~");
+    return `user@geov:${short}$`;
+  };
+  const setPrompt = () => { promptEl.textContent = promptText(); };
+
+  print("GeoOS 0.3.0 (Geode) — geosh 0.3" + (DEMO ? "  [demo mode]" : ""));
+  print("unified shell: linux + powershell + macos commands in one. type 'help'.\n");
+  setPrompt();
+
+  inp.addEventListener("keydown", async (e) => {
+    if (e.key === "ArrowUp") {
+      if (hist.length) { histIdx = Math.max(0, histIdx < 0 ? hist.length - 1 : histIdx - 1); inp.value = hist[histIdx] || ""; }
+      e.preventDefault(); return;
+    }
+    if (e.key === "ArrowDown") {
+      if (histIdx >= 0) { histIdx = Math.min(hist.length - 1, histIdx + 1); inp.value = hist[histIdx] || ""; }
+      e.preventDefault(); return;
+    }
+    if (e.key !== "Enter") return;
+    const cmd = inp.value.trim();
+    inp.value = "";
+    if (!cmd) return;
+    hist.push(cmd); histIdx = -1;
+    print(promptText() + " " + cmd, "cmd-line");
+    let res;
+    try {
+      if (DEMO) {
+        const ctx = { cwd };
+        res = demoShell(cmd, ctx);
+        cwd = ctx.cwd;
+      } else {
+        const j = await api("/api/exec", { session, cmd });
+        res = j.error ? "error: " + j.error : (j.output || "");
+        if (j.cwd) cwd = j.cwd;
+      }
+    } catch (err) { res = "error: " + err.message; }
+    if (res.includes("\x1bCLEAR\x1b")) { out.innerHTML = ""; setPrompt(); return; }
+    if (res.includes("\x1bEXIT\x1b")) { closeWin(win.wid); return; }
+    if (res) print(res, res.startsWith("error:") ? "err-line" : "");
+    setPrompt();
+  });
+  body.addEventListener("pointerdown", () => setTimeout(() => inp.focus(), 0));
+  setTimeout(() => inp.focus(), 50);
+}
