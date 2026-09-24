@@ -1,7 +1,8 @@
 """geov — the GeoOS command line.
 
     geov install            install GeoOS onto this computer (~/.geovos)
-    geov deploy             launch the full GeoOS desktop as an app
+                            (registers GeoOS as a real app with launcher icon)
+    geov deploy             launch the full GeoOS desktop as an app window
     geov shell              open the geosh terminal
     geov run <file>         run a .gv source or .gvb binary (sandboxed)
     geov compile <x.gv>     compile geoVariable source to binary bytecode
@@ -13,7 +14,10 @@ import argparse
 import os
 import platform
 import shutil
+import subprocess
 import sys
+import threading
+import time
 import webbrowser
 from pathlib import Path
 
@@ -35,6 +39,33 @@ def banner():
             f"{C_DIM}v{__version__}{C_RESET}")
 
 
+def _install_app_entry():
+    """Register GeoOS as a real application: icon + launcher entry, so it
+    shows up in the applications menu like any other installed app."""
+    try:
+        icon_src = Path(__file__).parent / "web" / "assets" / "logo.png"
+        if icon_src.is_file():
+            shutil.copy(icon_src, HOME / "icon.png")
+    except Exception:
+        pass
+    if platform.system() == "Linux":
+        apps = Path.home() / ".local" / "share" / "applications"
+        try:
+            apps.mkdir(parents=True, exist_ok=True)
+            (apps / "GeoOS.desktop").write_text(
+                "[Desktop Entry]\n"
+                "Name=GeoOS\n"
+                "Comment=A hobby OS layer — geosh, geoVariable, windowed desktop\n"
+                f"Exec={sys.executable} -m geov.cli deploy\n"
+                f"Icon={HOME / 'icon.png'}\n"
+                "Terminal=false\n"
+                "Type=Application\n"
+                "Categories=System;Utility;\n")
+            print(f"  [ok] app launcher entry  {apps / 'GeoOS.desktop'}")
+        except Exception as e:
+            print(f"  [skip] launcher entry: {e}")
+
+
 def cmd_install(args):
     print(banner())
     print(f"Installing GeoOS {__version__} ...")
@@ -44,9 +75,10 @@ def cmd_install(args):
     print(f"  [{'created' if fresh else 'verified'}] virtual filesystem  {HOME / 'vfs'}")
     print(f"  [ok] geosh shell, geopkg repo, geoVariable toolchain")
     print(f"  [ok] no external dependencies — pure Python stdlib")
+    _install_app_entry()
     print()
-    print("GeoOS is installed. Next steps:")
-    print(f"  {C_BOLD}geov deploy{C_RESET}   launch the desktop app (opens a browser tab)")
+    print("GeoOS is installed as an app. Next steps:")
+    print(f"  {C_BOLD}geov deploy{C_RESET}   launch the GeoOS app (its own window, not a tab)")
     print(f"  {C_BOLD}geov shell{C_RESET}    use the unified terminal")
     print(f"  {C_BOLD}geov run /examples/hello.gv{C_RESET}")
 
@@ -111,23 +143,88 @@ def cmd_hexdump(args):
         print(f"... ({len(data) - 1024} more bytes)")
 
 
-def cmd_deploy(args):
-    from .server import serve
-    print(banner())
-    server, port = serve(args.port)
-    url = f"http://127.0.0.1:{port}"
-    print(f"GeoOS desktop is running.")
-    print(f"  local:   {url}")
-    print(f"  vfs:     {HOME / 'vfs'}")
-    print(f"  a tab with GeoOS is opening; your current OS stays one tab away.")
-    print(f"  press Ctrl+C to shut down.\n")
-    if not args.no_browser:
-        webbrowser.open(url)
+def _find_chrome():
+    """A chromium-family browser we can launch in chromeless --app mode."""
+    for name in ("chromium", "chromium-browser", "google-chrome",
+                 "google-chrome-stable", "brave-browser", "microsoft-edge",
+                 "chrome"):
+        p = shutil.which(name)
+        if p:
+            return p
+    mac = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    if Path(mac).exists():
+        return mac
+    return None
+
+
+def _try_webview(url, server):
+    """Native app window via pywebview (pip install geov-os[app]).
+    Runs the OS server on a background thread; blocks until the window
+    closes. Returns False if pywebview isn't installed."""
+    try:
+        import webview
+    except ImportError:
+        return False
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    webview.create_window("GeoOS", url, width=1320, height=840,
+                          min_size=(900, 600))
+    webview.start()
+    server.shutdown()
+    return True
+
+
+def _try_chrome_app(url):
+    """Chromeless app window via any chromium-family browser (--app mode),
+    with its own profile so GeoOS feels like its own application."""
+    exe = _find_chrome()
+    if not exe:
+        return None
+    profile = HOME / "app-profile"
+    profile.mkdir(parents=True, exist_ok=True)
+    return subprocess.Popen(
+        [exe, f"--app={url}", "--window-size=1320,840", "--class=GeoOS",
+         f"--user-data-dir={profile}"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def _serve_loop(server, proc=None):
+    """Run the OS server until the app window closes or Ctrl+C."""
+    if proc is not None:
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            while proc.poll() is None:
+                time.sleep(0.4)
+        except KeyboardInterrupt:
+            proc.terminate()
+        server.shutdown()
+        print("GeoOS closed. bye.")
+        return
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         print("\nshutting down GeoOS. bye.")
         server.shutdown()
+
+
+def cmd_deploy(args):
+    from .server import serve
+    print(banner())
+    server, port = serve(args.port)
+    url = f"http://127.0.0.1:{port}"
+    print(f"GeoOS {__version__} is launching as a full app.")
+    print(f"  local:   {url}")
+    print(f"  vfs:     {HOME / 'vfs'}")
+    print(f"  close the GeoOS window (or Ctrl+C) to shut down.\n")
+    if args.no_browser:
+        _serve_loop(server)
+        return
+    if _try_webview(url, server):          # native window, blocks till closed
+        return
+    proc = _try_chrome_app(url)            # chromeless --app window
+    if proc is None:
+        print("  (no app-window runtime found — falling back to a browser tab)")
+        webbrowser.open(url)
+    _serve_loop(server, proc)
 
 
 def cmd_info(args):

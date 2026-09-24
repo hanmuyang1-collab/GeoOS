@@ -6,17 +6,25 @@ The server is what makes GeoOS a real OS layer instead of a mockup:
   * real code execution for multiple languages (Python, Node, Bash,
     geoVariable) with timeouts and output caps
   * persistent settings
+  * GeoSearch backend: real web search and a sandboxed page proxy so the
+    in-OS browser can render the web without X-Frame-Options blocks
 """
 import base64
+import html as html_mod
+import ipaddress
 import json
 import os
 import platform
+import re
 import shutil
 import socket
 import subprocess
 import sys
 import threading
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
@@ -38,6 +46,137 @@ MIME = {".html": "text/html; charset=utf-8", ".css": "text/css",
 MAX_CODE = 200_000          # chars of source accepted by /api/runcode
 MAX_OUTPUT = 200_000        # chars of stdout/stderr returned
 RUN_TIMEOUT = 15            # seconds, hard cap for guest code
+
+BROWSER_UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+              "(KHTML, like Gecko) Chrome/120.0 Safari/537.36 GeoOS-GeoSearch/0.3")
+BROWSE_TIMEOUT = 12         # seconds for search / page fetches
+MAX_PAGE = 2_500_000        # bytes of a web page we will proxy
+
+
+# ---------------------------------------------------------------- GeoSearch backend
+def _ip_blocked(host):
+    """SSRF guard: refuse to browse loopback / private / link-local hosts."""
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except Exception:
+        return True
+    for info in infos:
+        try:
+            ip = ipaddress.ip_address(info[4][0])
+        except Exception:
+            return True
+        if (ip.is_private or ip.is_loopback or ip.is_link_local
+                or ip.is_multicast or ip.is_reserved or ip.is_unspecified):
+            return True
+    return False
+
+
+def _clean(s):
+    return html_mod.unescape(re.sub(r"<[^>]+>", "", s)).strip()
+
+
+def _anchors(page, cls):
+    """All (href, inner-html) anchors carrying a CSS class, any attr order."""
+    out = []
+    for m in re.finditer(r"<a\b([^>]*)>(.*?)</a>", page, re.S):
+        attrs, text = m.group(1), m.group(2)
+        if cls in attrs:
+            hm = re.search(r"href=['\"]([^'\"]+)['\"]", attrs)
+            if hm:
+                out.append((hm.group(1), text))
+    return out
+
+
+def _unwrap_ddg(href):
+    m = re.search(r"uddg=([^&]+)", href)
+    return urllib.parse.unquote(m.group(1)) if m else href
+
+
+def _ddg_results(page, limit):
+    links = _anchors(page, "result__a")
+    snippets = [t for _, t in _anchors(page, "result__snippet")]
+    return [{"title": _clean(title), "url": _unwrap_ddg(href),
+             "snippet": _clean(snippets[i]) if i < len(snippets) else ""}
+            for i, (href, title) in enumerate(links[:limit])]
+
+
+def _ddg_lite_results(page, limit):
+    links = _anchors(page, "result-link")
+    snippets = re.findall(
+        r"<td[^>]*class=['\"]result-snippet['\"][^>]*>(.*?)</td>", page, re.S)
+    return [{"title": _clean(title), "url": _unwrap_ddg(href),
+             "snippet": _clean(snippets[i]) if i < len(snippets) else ""}
+            for i, (href, title) in enumerate(links[:limit])]
+
+
+def _bing_results(page, limit):
+    out = []
+    for chunk in page.split('<li class="b_algo"')[1:]:
+        m = re.search(r'<h2[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>',
+                      chunk, re.S)
+        if not m:
+            continue
+        cap = (re.search(r'class="b_lineclamp[^"]*"[^>]*>(.*?)</p>', chunk, re.S)
+               or re.search(r"<p[^>]*>(.*?)</p>", chunk, re.S))
+        out.append({"title": _clean(m.group(2)), "url": m.group(1),
+                    "snippet": _clean(cap.group(1)) if cap else ""})
+        if len(out) >= limit:
+            break
+    return out
+
+
+def web_search(query, limit=8):
+    """Real web search, no API key: DuckDuckGo HTML -> DDG Lite -> Bing."""
+    q = urllib.parse.quote_plus(query)
+    attempts = [
+        ("https://html.duckduckgo.com/html/?q=" + q, _ddg_results),
+        ("https://lite.duckduckgo.com/lite/?q=" + q, _ddg_lite_results),
+        ("https://www.bing.com/search?q=" + q + "&mkt=en-US", _bing_results),
+    ]
+    errors = []
+    for url, parser in attempts:
+        host = urllib.parse.urlparse(url).hostname
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": BROWSER_UA})
+            with urllib.request.urlopen(req, timeout=BROWSE_TIMEOUT) as r:
+                page = r.read(MAX_PAGE).decode("utf-8", "replace")
+            results = parser(page, limit)
+            if results:
+                return results
+            errors.append(host + ": no parseable results")
+        except Exception as e:
+            errors.append(f"{host}: {e}")
+    raise RuntimeError("all search backends failed — " + "; ".join(errors))
+
+
+def fetch_page(url):
+    """Fetch a web page server-side so the GeoSearch iframe can render it
+    same-origin (no X-Frame-Options blocks). Returns (html, final_url)."""
+    if "://" not in url:
+        url = "https://" + url
+    p = urllib.parse.urlparse(url)
+    if p.scheme not in ("http", "https") or not p.hostname:
+        raise ValueError("only http/https URLs are browsable")
+    if _ip_blocked(p.hostname):
+        raise ValueError("blocked: local/private addresses are not browsable")
+    req = urllib.request.Request(urllib.parse.urlunparse(p),
+                                 headers={"User-Agent": BROWSER_UA})
+    with urllib.request.urlopen(req, timeout=BROWSE_TIMEOUT) as r:
+        raw = r.read(MAX_PAGE)
+        ctype = r.headers.get("Content-Type", "")
+        final_url = r.geturl()
+    enc = "utf-8"
+    m = re.search(r"charset=([\w.-]+)", ctype)
+    if m:
+        enc = m.group(1)
+    text = raw.decode(enc, "replace")
+    # make relative links/resources resolve against the real origin
+    base = f'<base href="{html_mod.escape(final_url, quote=True)}">'
+    if re.search(r"<head[^>]*>", text, re.I):
+        text = re.sub(r"(<head[^>]*>)", r"\1" + base, text, count=1, flags=re.I)
+    else:
+        text = base + text
+    return text, final_url
 
 
 # ---------------------------------------------------------------- runtimes
@@ -279,6 +418,31 @@ def make_handler(state):
                                        for k, v in state.runtimes.items()})
                 if path == "/api/settings":
                     return self._json(state.settings)
+                if path == "/api/search":
+                    query = q.get("q", [""])[0].strip()
+                    if not query:
+                        return self._json({"error": "missing q"}, 400)
+                    return self._json({"query": query,
+                                       "results": web_search(query)})
+                if path == "/browse":
+                    target = q.get("url", [""])[0].strip()
+                    if not target:
+                        return self._json({"error": "missing url"}, 400)
+                    try:
+                        page, final_url = fetch_page(target)
+                    except Exception as e:
+                        msg = html_mod.escape(str(e))
+                        page = (f"<!doctype html><body style='background:#0b1120;"
+                                f"color:#e2e8f0;font-family:system-ui;padding:40px'>"
+                                f"<h2>GeoSearch couldn't load that page</h2>"
+                                f"<p>{msg}</p></body>")
+                    data = page.encode("utf-8", "replace")
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/html; charset=utf-8")
+                    self.send_header("Content-Length", str(len(data)))
+                    self.end_headers()   # same-origin proxy: no X-Frame-Options
+                    self.wfile.write(data)
+                    return
                 if path == "/api/fs":
                     vpath = q.get("path", ["/"])[0]
                     entries = [{"name": n, "type": t, "size": s}
