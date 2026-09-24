@@ -89,7 +89,10 @@ code { background: rgba(34,211,238,.12); padding: 1px 6px; border-radius: 4px; f
 /* ---------------- desktop tab ---------------- */
 .wallpaper {
   height: 100%;
-  background: url("assets/wallpaper.jpg") center/cover no-repeat, radial-gradient(ellipse at 70% 30%, #12203f, #05070f);
+  background:
+    url("assets/wallpaper.jpg") center/cover no-repeat,
+    url("assets/wallpaper.svg") center/cover no-repeat,
+    radial-gradient(ellipse at 70% 30%, #12203f, #05070f);
   position: relative;
 }
 .icons { position: absolute; top: 28px; left: 24px; display: flex; flex-direction: column; gap: 22px; }

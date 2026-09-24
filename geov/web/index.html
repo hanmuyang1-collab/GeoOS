@@ -9,7 +9,7 @@
 </head>
 <body>
 <div id="boot">
-  <img src="assets/logo.png" alt="GeoOS" class="boot-logo">
+  <img src="assets/logo.png" onerror="this.onerror=null;this.src='assets/logo.svg'" alt="GeoOS" class="boot-logo">
   <div class="boot-text">GeoOS</div>
   <div class="boot-bar"><div class="boot-fill"></div></div>
   <div class="boot-sub">loading geokernel ...</div>
@@ -18,7 +18,7 @@
 <div id="desktop" hidden>
   <header id="menubar">
     <div class="brand" onclick="showTab('desktop')">
-      <img src="assets/logo.png" alt=""> <span>GeoOS</span>
+      <img src="assets/logo.png" onerror="this.onerror=null;this.src='assets/logo.svg'" alt=""> <span>GeoOS</span>
     </div>
     <nav id="tabs">
       <button data-tab="desktop" class="tab active">Desktop</button>
