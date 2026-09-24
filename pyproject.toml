@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "geov-os"
-version = "0.2.0"
-description = "GeoOS — a hobby operating system layer with geosh (unified shell) and geoVariable (binary sandboxed scripting language)"
+version = "0.3.0"
+description = "GeoOS — a hobby operating system layer with geosh (unified shell), geoVariable (binary sandboxed scripting) and a windowed desktop with apps incl. GeoSearch web browser"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.9"
@@ -21,6 +21,11 @@ classifiers = [
 ]
 # zero runtime dependencies — pure Python standard library
 dependencies = []
+
+[project.optional-dependencies]
+# native OS window for `geov deploy` (otherwise a chromeless chromium
+# --app window is used when available, falling back to a browser tab)
+app = ["pywebview>=5"]
 
 [project.scripts]
 geov = "geov.cli:main"

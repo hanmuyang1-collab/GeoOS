@@ -10,13 +10,17 @@ outside `~/.geovos`.
 
 ```
 pip install geov-os        # installs everything (no other deps)
-geov install               # set up GeoOS on this computer
-geov deploy                # launch the full desktop as an app (browser tab)
+geov install               # set up GeoOS on this computer (+ app launcher icon)
+geov deploy                # launch GeoOS as a real app window — not a CLI, not a tab
 ```
 
-`geov deploy` opens the GeoOS desktop in a new browser tab — your current OS
-stays one tab away, and the desktop even has a dedicated **Host OS** window so
-you can check what's underneath and switch back.
+`geov deploy` opens the GeoOS desktop as its own **application window**
+(native window via `pip install geov-os[app]` / pywebview; otherwise a
+chromeless chromium `--app` window with its own profile; a plain browser tab
+only as last resort). On Linux, `geov install` also registers a launcher
+entry so GeoOS shows up in your applications menu. Your current OS stays one
+window away, and the desktop has a dedicated **Host OS** window so you can
+check what's underneath and switch back.
 
 ## The desktop
 
@@ -26,6 +30,7 @@ windows with a dock and desktop icons.
 | app | what it does |
 |---|---|
 | **Terminal** | geosh — unified Linux + PowerShell + macOS shell (open as many as you like) |
+| **GeoSearch** | web browser **and** search engine: real results via the server, pages render in-window through a sandboxed, SSRF-guarded proxy |
 | **Code Studio** | editor that creates **real local files**; runs `.gv` (sandboxed bytecode VM), `.py` (host Python), `.js` (Node), `.sh` (Bash) via the server |
 | **Files** | browse, edit, rename, delete the VFS |
 | **Monitor** | **live host telemetry** — real CPU %, memory, and the host process table from the kernel |
@@ -46,6 +51,7 @@ windows with a dock and desktop icons.
 | **window manager** | pure-JS windowing: drag, resize, minimize, maximize, focus stacking, dock |
 | **gevm** | the sandbox VM: instruction budget, stack cap, call-depth cap, zero host I/O |
 | **runtime bridge** | server-side execution of Python / JavaScript / Bash with timeouts, capped output and a jailed working directory |
+| **GeoSearch proxy** | server-side web search (no API key) + SSRF-guarded page fetch, so the in-OS browser renders pages without X-Frame-Options blocks |
 
 ## geoVariable in 30 seconds
 
@@ -98,8 +104,8 @@ gvc /examples/fib.gv -o fib.gvb && run fib.gvb
 ## CLI reference
 
 ```
-geov install                 install GeoOS onto this computer
-geov deploy [--port 8000]    launch the desktop app (+ Host OS tab)
+geov install                 install GeoOS onto this computer (+ launcher entry)
+geov deploy [--port 8000]    launch GeoOS as a full app window
 geov shell                   interactive geosh terminal
 geov run <file> [--max-steps N]   run .gv source or .gvb binary
 geov compile <x.gv> [-o x.gvb]    compile to binary bytecode
@@ -119,6 +125,9 @@ GET  /api/host                 host machine info
 GET  /api/sysinfo              live host CPU %, memory, uptime, process table
 GET  /api/processes            top host processes by memory
 GET  /api/runtimes             which language runtimes the host provides
+GET  /api/search?q=            real web search (title, url, snippet)
+GET  /browse?url=              sandboxed page proxy for GeoSearch
+                               (SSRF-guarded, <base>-rebased, same-origin)
 GET  /api/settings             persisted desktop settings
 POST /api/settings             update settings (merged + saved)
 GET  /api/fs?path=             list a VFS directory
@@ -136,15 +145,21 @@ POST /api/runcode              run python/javascript/bash/geovariable with
 
 ```
 geov/
-  cli.py             command line entry point
+  cli.py             installer + app launcher (desktop entry, app window)
   shell.py           geosh — the unified command set + aliases
   vfs.py             virtual filesystem (sandboxed)
-  server.py          local OS server: telemetry, settings, multi-language code execution
+  server.py          local OS server: telemetry, settings, multi-language
+                     code execution, GeoSearch web search + page proxy
   geovariable/
     compiler.py      .gv source -> .gvb binary (lexer, parser, codegen)
     vm.py            the sandbox VM
     format.py        the .gvb binary format
   web/               the windowed desktop (vanilla JS, no build step)
+    app.js             core: API layer, settings, window manager, dock, Terminal
+    apps-files-studio.js  Files + Code Studio apps
+    apps-geosearch.js  GeoSearch — the in-OS web browser + search
+    apps-misc.js       Monitor/Settings/Calc/Paint/Help/Host + app registry
+    demo.js            demo mode for the static preview (no server)
 docs/GEOVARIABLE.md  language + binary format spec
 examples/            hello.gv, fizzbuzz.gv, fib.gv
 ```
