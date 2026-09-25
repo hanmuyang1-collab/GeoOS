@@ -363,9 +363,9 @@ class ShellSession:
         info = [
             f"user@geov-box",
             f"---------------",
-            f"OS: GeoOS 0.2.0 Geode",
-            f"Kernel: geokernel 0.2.0",
-            f"Shell: geosh 0.2",
+            f"OS: GeoOS 0.3.0 Geode",
+            f"Kernel: geokernel 0.3.0",
+            f"Shell: geosh 0.3",
             f"Script: geoVariable 1 (.gvb binary, sandboxed)",
             f"Host: {host} {platform.machine()}",
             f"Packages: {len(self.vfs.installed_pkgs())} installed",
@@ -381,7 +381,7 @@ class ShellSession:
         return "\n".join(lines)
 
     def cmd_about(self, args, stdin):
-        return ("GeoOS 0.2.0 (Geode) — a hobby OS layer written from scratch.\n"
+        return ("GeoOS 0.3.0 (Geode) — a hobby OS layer written from scratch.\n"
                 "Includes geosh (unified shell), the geoVariable binary\n"
                 "scripting language, a sandbox VM, and a web desktop.\n"
                 "Nothing here touches your real files outside ~/.geovos.")
