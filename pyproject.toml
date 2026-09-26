@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "geov-os"
-version = "0.3.0"
-description = "GeoOS — a hobby operating system layer with geosh (unified shell), geoVariable (binary sandboxed scripting) and a windowed desktop with apps incl. GeoSearch web browser"
+version = "0.3.1"
+description = "GeoOS — a hobby operating system layer with geosh (unified shell), geoVariable (binary sandboxed scripting) and a windowed desktop with apps incl. GeoBrowse web browser"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.9"

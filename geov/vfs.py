@@ -10,12 +10,12 @@ from pathlib import Path
 
 OS_RELEASE = """\
 NAME=GeoOS
-VERSION=0.3.0 (Geode)
+VERSION=0.3.1 (Geode)
 ID=geov
-KERNEL=geokernel 0.3.0
+KERNEL=geokernel 0.3.1
 SHELL=geosh 0.3
 SCRIPT=geoVariable 1 (binary, sandboxed)
-PRETTY_NAME="GeoOS 0.3.0 Geode"
+PRETTY_NAME="GeoOS 0.3.1 Geode"
 """
 
 WELCOME = """\
@@ -36,7 +36,7 @@ Try these:
   geofetch                      show system info
   pkg list                      browse installable packages
 
-Desktop apps: Terminal, GeoSearch (web browser + search), Code Studio,
+Desktop apps: Terminal, GeoBrowse (live web browser + search), Code Studio,
 Files, Monitor, Paint, Calculator, Settings, Help, Host OS.
 """
 

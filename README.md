@@ -30,7 +30,7 @@ windows with a dock and desktop icons.
 | app | what it does |
 |---|---|
 | **Terminal** | geosh — unified Linux + PowerShell + macOS shell (open as many as you like) |
-| **GeoSearch** | web browser **and** search engine: real results via the server, pages render in-window through a sandboxed, SSRF-guarded proxy |
+| **GeoBrowse** | web browser **and** search engine: real results via the server, pages render live in-window through a sandboxed, SSRF-guarded proxy — links keep working inside the window |
 | **Code Studio** | editor that creates **real local files**; runs `.gv` (sandboxed bytecode VM), `.py` (host Python), `.js` (Node), `.sh` (Bash) via the server |
 | **Files** | browse, edit, rename, delete the VFS |
 | **Monitor** | **live host telemetry** — real CPU %, memory, and the host process table from the kernel |
@@ -51,7 +51,7 @@ windows with a dock and desktop icons.
 | **window manager** | pure-JS windowing: drag, resize, minimize, maximize, focus stacking, dock |
 | **gevm** | the sandbox VM: instruction budget, stack cap, call-depth cap, zero host I/O |
 | **runtime bridge** | server-side execution of Python / JavaScript / Bash with timeouts, capped output and a jailed working directory |
-| **GeoSearch proxy** | server-side web search (no API key) + SSRF-guarded page fetch, so the in-OS browser renders pages without X-Frame-Options blocks |
+| **GeoBrowse proxy** | server-side web search (no API key) + SSRF-guarded page fetch with link rewriting, so the in-OS browser renders pages without X-Frame-Options blocks and stays navigable |
 
 ## geoVariable in 30 seconds
 
@@ -126,7 +126,7 @@ GET  /api/sysinfo              live host CPU %, memory, uptime, process table
 GET  /api/processes            top host processes by memory
 GET  /api/runtimes             which language runtimes the host provides
 GET  /api/search?q=            real web search (title, url, snippet)
-GET  /browse?url=              sandboxed page proxy for GeoSearch
+GET  /browse?url=              sandboxed page proxy for GeoBrowse
                                (SSRF-guarded, <base>-rebased, same-origin)
 GET  /api/settings             persisted desktop settings
 POST /api/settings             update settings (merged + saved)
@@ -149,7 +149,7 @@ geov/
   shell.py           geosh — the unified command set + aliases
   vfs.py             virtual filesystem (sandboxed)
   server.py          local OS server: telemetry, settings, multi-language
-                     code execution, GeoSearch web search + page proxy
+                     code execution, GeoBrowse web search + page proxy
   geovariable/
     compiler.py      .gv source -> .gvb binary (lexer, parser, codegen)
     vm.py            the sandbox VM
@@ -157,7 +157,7 @@ geov/
   web/               the windowed desktop (vanilla JS, no build step)
     app.js             core: API layer, settings, window manager, dock, Terminal
     apps-files-studio.js  Files + Code Studio apps
-    apps-geosearch.js  GeoSearch — the in-OS web browser + search
+    apps-geobrowse.js  GeoBrowse — the in-OS web browser + search
     apps-misc.js       Monitor/Settings/Calc/Paint/Help/Host + app registry
     demo.js            demo mode for the static preview (no server)
 docs/GEOVARIABLE.md  language + binary format spec
