@@ -6,7 +6,7 @@ The server is what makes GeoOS a real OS layer instead of a mockup:
   * real code execution for multiple languages (Python, Node, Bash,
     geoVariable) with timeouts and output caps
   * persistent settings
-  * GeoSearch backend: real web search and a sandboxed page proxy so the
+  * GeoBrowse backend: real web search and a sandboxed page proxy so the
     in-OS browser can render the web without X-Frame-Options blocks
 """
 import base64
@@ -48,12 +48,12 @@ MAX_OUTPUT = 200_000        # chars of stdout/stderr returned
 RUN_TIMEOUT = 15            # seconds, hard cap for guest code
 
 BROWSER_UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-              "(KHTML, like Gecko) Chrome/120.0 Safari/537.36 GeoOS-GeoSearch/0.3")
+              "(KHTML, like Gecko) Chrome/120.0 Safari/537.36 GeoOS-GeoBrowse/0.3")
 BROWSE_TIMEOUT = 12         # seconds for search / page fetches
 MAX_PAGE = 2_500_000        # bytes of a web page we will proxy
 
 
-# ---------------------------------------------------------------- GeoSearch backend
+# ---------------------------------------------------------------- GeoBrowse backend
 def _ip_blocked(host):
     """SSRF guard: refuse to browse loopback / private / link-local hosts."""
     try:
@@ -149,8 +149,26 @@ def web_search(query, limit=8):
     raise RuntimeError("all search backends failed — " + "; ".join(errors))
 
 
+def _rewrite_links(text, final_url):
+    """Point in-page links/forms back through /browse so clicking around
+    stays inside GeoBrowse's window (real live browsing, same-origin)."""
+    def repl(m):
+        attr, q, href = m.group(1), m.group(2), m.group(3)
+        low = href.strip().lower()
+        if not href or low.startswith(("#", "javascript:", "mailto:",
+                                       "tel:", "data:", "blob:")):
+            return m.group(0)
+        absu = urllib.parse.urljoin(final_url, href)
+        if not absu.startswith(("http://", "https://")):
+            return m.group(0)
+        prox = "/browse?url=" + urllib.parse.quote(absu, safe="")
+        return f"{attr}={q}{prox}{q}"
+    return re.sub(r'''(href|action)\s*=\s*(["'])(.*?)\2''', repl, text,
+                  flags=re.I | re.S)
+
+
 def fetch_page(url):
-    """Fetch a web page server-side so the GeoSearch iframe can render it
+    """Fetch a web page server-side so the GeoBrowse iframe can render it
     same-origin (no X-Frame-Options blocks). Returns (html, final_url)."""
     if "://" not in url:
         url = "https://" + url
@@ -170,6 +188,9 @@ def fetch_page(url):
     if m:
         enc = m.group(1)
     text = raw.decode(enc, "replace")
+    # keep navigation inside the window: links route back through /browse.
+    # (runs BEFORE the base tag is injected, so our <base href> is untouched)
+    text = _rewrite_links(text, final_url)
     # make relative links/resources resolve against the real origin
     base = f'<base href="{html_mod.escape(final_url, quote=True)}">'
     if re.search(r"<head[^>]*>", text, re.I):
@@ -434,7 +455,7 @@ def make_handler(state):
                         msg = html_mod.escape(str(e))
                         page = (f"<!doctype html><body style='background:#0b1120;"
                                 f"color:#e2e8f0;font-family:system-ui;padding:40px'>"
-                                f"<h2>GeoSearch couldn't load that page</h2>"
+                                f"<h2>GeoBrowse couldn't load that page</h2>"
                                 f"<p>{msg}</p></body>")
                     data = page.encode("utf-8", "replace")
                     self.send_response(200)
