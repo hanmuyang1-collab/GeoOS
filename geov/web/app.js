@@ -300,7 +300,7 @@ function mountTerminal(body, win) {
   };
   const setPrompt = () => { promptEl.textContent = promptText(); };
 
-  print("GeoOS 0.3.0 (Geode) — geosh 0.3" + (DEMO ? "  [demo mode]" : ""));
+  print("GeoOS 0.3.1 (Geode) — geosh 0.3" + (DEMO ? "  [demo mode]" : ""));
   print("unified shell: linux + powershell + macos commands in one. type 'help'.\n");
   setPrompt();
 
