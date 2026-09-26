@@ -14,7 +14,8 @@ function mountFiles(body, win, opts) {
     `<button data-a="new">New file</button><button data-a="mkdir">New folder</button>` +
     `<button data-a="rename">Rename</button><button data-a="del">Delete</button>` +
     `<button data-a="save" disabled>Save</button></div>` +
-    `<textarea class="fs-editor" placeholder="select a file, or create a new one" disabled></textarea>` +
+    `<textarea class="fs-editor" placeholder="select a file, or create a new one" disabled ` +
+    `autocapitalize="none" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>` +
     `</div></div>`;
   const list = body.querySelector(".fs-list");
   const pathEl = body.querySelector(".fs-path");
@@ -131,6 +132,50 @@ const STUDIO_EXAMPLES = {
 const LANG_BY_EXT = { gv: "geovariable", py: "python", js: "javascript",
                       sh: "bash", bash: "bash", md: "markdown", txt: "text", json: "json" };
 
+/* ---------------- syntax highlighting ---------------- */
+const HL_KEYWORDS = {
+  geovariable: "let set if elif else while for in fn return true false and or not break continue null",
+  python: "def return if elif else while for in import from as pass break continue class try except finally with lambda yield global nonlocal True False None and or not is raise del assert async await print",
+  javascript: "const let var function return if else while for in of do switch case default break continue class extends new try catch finally throw typeof instanceof delete void yield async await true false null undefined this super static import export from",
+  bash: "if then elif else fi for while until do done case esac function in echo exit return local export readonly shift break continue eval exec set unset source alias",
+  json: "true false null",
+};
+const HL_BUILTINS = {
+  geovariable: "print str num len upper lower abs min max type input",
+  python: "len range str int float list dict set tuple enumerate zip map filter sum min max abs type input open isinstance repr sorted reversed round",
+  javascript: "console Math JSON Object Array String Number Boolean Promise Date Error RegExp Map Set parseInt parseFloat isNaN require module exports window document fetch setTimeout setInterval",
+  bash: "cd ls cat grep sed awk pwd chmod chown mkdir rm cp mv touch head tail",
+};
+function hlEscape(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function highlightCode(src, lang) {
+  const kw = new Set((HL_KEYWORDS[lang] || "").split(" ").filter(Boolean));
+  const bi = new Set((HL_BUILTINS[lang] || "").split(" ").filter(Boolean));
+  if (!kw.size && !bi.size) return hlEscape(src);
+  const comment = (lang === "javascript") ? "\\/\\/[^\\n]*"
+    : (lang === "json") ? null : "#[^\\n]*";
+  const re = new RegExp(
+    (comment ? "(" + comment + ")|" : "") +
+    '("(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\'|`(?:[^`\\\\]|\\\\.)*`)|' +
+    "(\\b\\d+(?:\\.\\d+)?\\b)|([A-Za-z_]\\w*)", "g");
+  let out = "", last = 0, m;
+  while ((m = re.exec(src))) {
+    out += hlEscape(src.slice(last, m.index));
+    if (m[1] !== undefined) out += `<span class="tok-com">${hlEscape(m[1])}</span>`;
+    else if (m[2] !== undefined) out += `<span class="tok-str">${hlEscape(m[2])}</span>`;
+    else if (m[3] !== undefined) out += `<span class="tok-num">${hlEscape(m[3])}</span>`;
+    else {
+      const w = m[4];
+      if (kw.has(w)) out += `<span class="tok-kw">${w}</span>`;
+      else if (bi.has(w)) out += `<span class="tok-bi">${w}</span>`;
+      else out += hlEscape(w);
+    }
+    last = m.index + m[0].length;
+  }
+  return out + hlEscape(src.slice(last));
+}
+
 function mountStudio(body, win, opts) {
   body.innerHTML =
     `<div class="studio-layout"><div class="studio-side">` +
@@ -146,13 +191,17 @@ function mountStudio(body, win, opts) {
     `<button data-a="new">New</button><button data-a="save">Save</button>` +
     `<button data-a="hex">Hex</button>` +
     `<button class="btn-primary" data-a="run">&#9654; Run</button></div>` +
-    `<textarea class="studio-editor" spellcheck="false"></textarea>` +
+    `<div class="studio-editor-wrap"><pre class="studio-hl" aria-hidden="true"><code></code></pre>` +
+    `<textarea class="studio-editor" spellcheck="false" autocapitalize="none" ` +
+    `autocomplete="off" autocorrect="off" data-gramm="false"></textarea></div>` +
     `<div class="studio-out-wrap"><div class="studio-out-head">output` +
     `<span class="studio-status"></span></div>` +
     `<div class="studio-out">press Run to execute — .gv compiles to real .gvb bytecode, .py runs on the host python, .js on node</div>` +
     `</div></div></div>`;
 
   const editor = body.querySelector(".studio-editor");
+  const hlPre = body.querySelector(".studio-hl");
+  const hlCode = body.querySelector(".studio-hl code");
   const outEl = body.querySelector(".studio-out");
   const statusEl = body.querySelector(".studio-status");
   const fileEl = body.querySelector(".studio-file");
@@ -164,11 +213,18 @@ function mountStudio(body, win, opts) {
 
   const ext = (p) => (p.split(".").pop() || "").toLowerCase();
   const langOf = (p) => LANG_BY_EXT[ext(p)] || "text";
+  const curLang = () => (curFile ? langOf(curFile) : "geovariable");
+  const updateHL = () => {
+    hlCode.innerHTML = highlightCode(editor.value, curLang()) + "\n";
+    hlPre.scrollTop = editor.scrollTop;
+    hlPre.scrollLeft = editor.scrollLeft;
+  };
   const setLang = () => {
-    const l = curFile ? langOf(curFile) : "geovariable";
+    const l = curLang();
     langEl.textContent = l;
     const rt = RUNTIMES[l] || (l === "bash" ? RUNTIMES.bash || RUNTIMES.sh : null);
     langEl.title = rt ? ("runtime: " + (rt.version || "available")) : "not runnable (edit only)";
+    updateHL();
   };
   const setStatus = (t) => { statusEl.textContent = t; };
   const setOut = (t, isErr) => {
@@ -313,12 +369,18 @@ function mountStudio(body, win, opts) {
     setStatus("not runnable");
   };
 
+  editor.addEventListener("input", updateHL);
+  editor.addEventListener("scroll", () => {
+    hlPre.scrollTop = editor.scrollTop;
+    hlPre.scrollLeft = editor.scrollLeft;
+  });
   editor.addEventListener("keydown", (e) => {
     if (e.key === "Tab") {
       e.preventDefault();
       const s = editor.selectionStart;
       editor.value = editor.value.slice(0, s) + "    " + editor.value.slice(editor.selectionEnd);
       editor.selectionStart = editor.selectionEnd = s + 4;
+      updateHL();
     }
   });
 
