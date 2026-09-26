@@ -15,7 +15,7 @@ function demoDefaults() {
       "/bin": ["README"], "/tmp": [], "/var": ["pkg/"], "/var/pkg": ["installed.json"],
     },
     files: {
-      "/etc/os-release": 'NAME=GeoOS\nVERSION=0.3.0 (Geode)\nKERNEL=geokernel 0.3.0\nSHELL=geosh 0.3\nSCRIPT=geoVariable 1 (binary, sandboxed)\nPRETTY_NAME="GeoOS 0.3.0 Geode"\n',
+      "/etc/os-release": 'NAME=GeoOS\nVERSION=0.3.1 (Geode)\nKERNEL=geokernel 0.3.1\nSHELL=geosh 0.3\nSCRIPT=geoVariable 1 (binary, sandboxed)\nPRETTY_NAME="GeoOS 0.3.1 Geode"\n',
       "/docs/welcome.txt": "Welcome to GeoOS!\n\nThis static preview runs in demo mode.\nFor the real thing:  pip install geov-os  &&  geov deploy\n\nTry in the Terminal: help, ls /, geofetch, run /examples/fizzbuzz.gv, pkg list",
       "/examples/hello.gv": STUDIO_EXAMPLES.hello,
       "/examples/fizzbuzz.gv": STUDIO_EXAMPLES.fizzbuzz,
@@ -136,13 +136,13 @@ function demoCommand(toks, ctx) {
     case "date": return new Date().toString();
     case "whoami": return "user";
     case "sysinfo":
-      return "GeoOS 0.3.0 Geode\nkernel:   geokernel 0.3.0\nshell:    geosh 0.3 (demo)\n" +
+      return "GeoOS 0.3.1 Geode\nkernel:   geokernel 0.3.1\nshell:    geosh 0.3 (demo)\n" +
         "script:   geoVariable 1 (binary, sandboxed)\nhost os:  detected from browser";
     case "geofetch":
       return "      .-~~~~~~~~-.\n    .'  .-~~~-.   '.\n" +
-        "   /   / ,--. \\     \\\n  |   | (Geo)  |     |\n" +
-        "   \\   \\ `--' /     /\n    '.  `-~~~-'   .'\n" +
-        "      '-~~~~~~~~-'\n\nuser@geov-box\nOS: GeoOS 0.3.0 Geode (demo)\n" +
+        "   /   / ,--. \     \\\n  |   | (Geo)  |     |\n" +
+        "   \   \ `--' /     /\n    '.  `-~~~-'   .'\n" +
+        "      '-~~~~~~~~-'\n\nuser@geov-box\nOS: GeoOS 0.3.1 Geode (demo)\n" +
         "Shell: geosh 0.3\nScript: geoVariable 1 (.gvb binary, sandboxed)";
     case "about":
       return "GeoOS — a hobby OS layer. Demo mode; run `geov deploy` for the full system.";
