@@ -317,7 +317,7 @@ input[type="text"], input[type="number"], select {
 ::-webkit-scrollbar-thumb { background: #1d2b4a; border-radius: 6px; }
 
 
-/* ---------- GeoSearch (browser + search) ---------- */
+/* ---------- GeoBrowse (browser + search) ---------- */
 .gs-wrap { display: flex; flex-direction: column; height: 100%; }
 .gs-toolbar { display: flex; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--line); align-items: center; }
 .gs-toolbar button { padding: 4px 10px; }
