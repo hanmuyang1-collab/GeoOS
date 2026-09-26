@@ -374,13 +374,48 @@ function mountStudio(body, win, opts) {
     hlPre.scrollTop = editor.scrollTop;
     hlPre.scrollLeft = editor.scrollLeft;
   });
+
+  /* auto-pairs: brackets and quotes close themselves, selections get
+     wrapped, typing a closer over an auto-inserted one just steps past
+     it, and Backspace on an empty pair removes both sides. */
+  const PAIRS = { "(": ")", "[": "]", "{": "}", '"': '"', "'": "'", "`": "`" };
   editor.addEventListener("keydown", (e) => {
-    if (e.key === "Tab") {
+    const st = editor.selectionStart, en = editor.selectionEnd;
+    const val = editor.value;
+    const replace = (t, cur) => {
       e.preventDefault();
-      const s = editor.selectionStart;
-      editor.value = editor.value.slice(0, s) + "    " + editor.value.slice(editor.selectionEnd);
-      editor.selectionStart = editor.selectionEnd = s + 4;
+      editor.value = val.slice(0, st) + t + val.slice(en);
+      editor.selectionStart = editor.selectionEnd = cur;
       updateHL();
+    };
+    if (e.key === "Tab") { replace("    ", st + 4); return; }
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const prev = val[st - 1] || "", next = val[en] || "";
+    if (e.key === "Backspace" && st === en && PAIRS[prev] === next) {
+      e.preventDefault();
+      editor.value = val.slice(0, st - 1) + val.slice(en + 1);
+      editor.selectionStart = editor.selectionEnd = st - 1;
+      updateHL();
+      return;
+    }
+    if (e.key === "Enter" && st === en && PAIRS[prev] === next && "([{".includes(prev)) {
+      replace("\n\n", st + 1);   // split a bracket pair into a block
+      return;
+    }
+    if (e.key.length !== 1) return;
+    if (st === en && (")]}\"'`".includes(e.key)) && next === e.key) {
+      e.preventDefault();        // type over the auto-inserted closer
+      editor.selectionStart = editor.selectionEnd = st + 1;
+      return;
+    }
+    if (PAIRS[e.key]) {
+      const isQuote = e.key === '"' || e.key === "'";
+      if (isQuote && /[\w]/.test(prev)) return;   // apostrophe in don't, etc.
+      if (st !== en) {           // wrap the selection
+        replace(e.key + val.slice(st, en) + PAIRS[e.key], en + 1);
+      } else {
+        replace(e.key + PAIRS[e.key], st + 1);
+      }
     }
   });
 
