@@ -49,7 +49,7 @@ function mountMonitor(body, win) {
       memStat.textContent = (memData[59] * 0.64).toFixed(0) + " MB / 4096 MB (simulated)";
       tbody.innerHTML = [[1, "geovd", "12.0"], [42, "gevm", "48.5"], [43, "geosh", "9.2"], [77, "webd", "33.7"]]
         .map(p => `<tr><td>${p[0]}</td><td>${p[1]}</td><td>${p[2]}</td></tr>`).join("");
-      sysEl.textContent = "GeoOS 0.3.0 Geode\nkernel: geokernel 0.3.0\nmode: demo (static preview)\n\nrun `geov deploy` for live host telemetry";
+      sysEl.textContent = "GeoOS 0.3.1 Geode\nkernel: geokernel 0.3.1\nmode: demo (static preview)\n\nrun `geov deploy` for live host telemetry";
       return;
     }
     try {
@@ -66,7 +66,7 @@ function mountMonitor(body, win) {
       tbody.innerHTML = (j.procs || [])
         .map(p => `<tr><td>${p.pid}</td><td>${p.name}</td><td>${p.mem_mb}</td></tr>`).join("");
       sysEl.textContent =
-        `GeoOS 0.3.0 Geode\nkernel: geokernel 0.3.0\n` +
+        `GeoOS 0.3.1 Geode\nkernel: geokernel 0.3.1\n` +
         `host uptime: ${fmtUptime(j.uptime_s)}\n` +
         (j.loadavg ? `load avg: ${j.loadavg.map(x => x.toFixed(2)).join("  ")}\n` : "") +
         `processes shown: ${(j.procs || []).length} (of host)`;
@@ -264,7 +264,7 @@ function mountPaint(body, win) {
 /* ============================ help app ============================ */
 function mountHelp(body, win) {
   body.innerHTML = `<div class="help-body">
-<h2>GeoOS 0.3.0 “Geode”</h2>
+<h2>GeoOS 0.3.1 “Geode”</h2>
 <p>A hobby OS that runs sandboxed on your machine: real windows, a real virtual filesystem
 on disk, a unified shell, a binary scripting language, and live host telemetry.</p>
 
@@ -272,7 +272,7 @@ on disk, a unified shell, a binary scripting language, and live host telemetry.<
 <table>
 <tr><th>App</th><th>What it does</th></tr>
 <tr><td>Terminal</td><td>geosh — unified Linux + PowerShell + macOS commands, pipes, redirects, packages</td></tr>
-<tr><td>GeoSearch</td><td>web browser + search — real results from the server, pages render in-window through the sandboxed proxy (SSRF-guarded)</td></tr>
+<tr><td>GeoBrowse</td><td>web browser + search — real results from the server, pages render live in-window through the sandboxed proxy (SSRF-guarded), links keep working</td></tr>
 <tr><td>Code Studio</td><td>writes real local files; runs geoVariable (.gv), Python (.py), JavaScript (.js), Bash (.sh)</td></tr>
 <tr><td>Files</td><td>browse / edit / rename / delete the VFS at ~/.geovos/vfs</td></tr>
 <tr><td>Monitor</td><td>live host CPU / memory / process table from the real kernel</td></tr>
@@ -321,7 +321,7 @@ function mountHost(body, win) {
       const os = ua.includes("Win") ? "Windows" : ua.includes("Mac") ? "macOS"
         : ua.includes("Linux") ? "Linux" : "unknown";
       info = { system: os + " (via browser)", platform: navigator.platform,
-               device: "this device", geov: "0.3.0 (demo)",
+               device: "this device", geov: "0.3.1 (demo)",
                note: "run `geov deploy` for live host details" };
     } else {
       info = await apiGet("/api/host");
@@ -339,7 +339,7 @@ function mountHost(body, win) {
 /* ============================ app registry ============================ */
 const APPS = {
   terminal: { title: "Terminal", glyph: "&gt;_", size: [740, 460], singleton: false, desktop: true, mount: mountTerminal },
-  geosearch: { title: "GeoSearch", glyph: "&#127758;", size: [920, 620], singleton: false, desktop: true, mount: mountGeoSearch },
+  geobrowse: { title: "GeoBrowse", glyph: "&#127758;", size: [920, 620], singleton: false, desktop: true, mount: mountGeoBrowse },
   studio:   { title: "Code Studio", glyph: "&lt;/&gt;", size: [880, 580], singleton: false, desktop: true, mount: mountStudio },
   files:    { title: "Files", glyph: "&#128193;", size: [780, 490], singleton: false, desktop: true, mount: mountFiles },
   monitor:  { title: "Monitor", glyph: "&#9638;", size: [800, 540], singleton: true, desktop: true, mount: mountMonitor },
@@ -349,3 +349,4 @@ const APPS = {
   help:     { title: "Help &amp; Docs", glyph: "?", size: [660, 540], singleton: true, desktop: true, mount: mountHelp },
   host:     { title: "Host OS", glyph: "&#x29C9;", size: [660, 500], singleton: true, desktop: false, mount: mountHost },
 };
+
