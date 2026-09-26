@@ -279,7 +279,7 @@ function mountTerminal(body, win) {
   body.innerHTML =
     `<div class="term-wrap"><div class="term-out"></div>` +
     `<div class="term-input-row"><span class="term-prompt"></span>` +
-    `<input class="term-in" autocomplete="off" spellcheck="false" placeholder="type 'help' ..."></div></div>`;
+    `<input class="term-in" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="type 'help' ..."></div></div>`;
   const out = body.querySelector(".term-out");
   const inp = body.querySelector(".term-in");
   const promptEl = body.querySelector(".term-prompt");
