@@ -140,8 +140,8 @@ function demoCommand(toks, ctx) {
         "script:   geoVariable 1 (binary, sandboxed)\nhost os:  detected from browser";
     case "geofetch":
       return "      .-~~~~~~~~-.\n    .'  .-~~~-.   '.\n" +
-        "   /   / ,--. \     \\\n  |   | (Geo)  |     |\n" +
-        "   \   \ `--' /     /\n    '.  `-~~~-'   .'\n" +
+        "   /   / ,--. \\     \\\n  |   | (Geo)  |     |\n" +
+        "   \\   \\ `--' /     /\n    '.  `-~~~-'   .'\n" +
         "      '-~~~~~~~~-'\n\nuser@geov-box\nOS: GeoOS 0.3.1 Geode (demo)\n" +
         "Shell: geosh 0.3\nScript: geoVariable 1 (.gvb binary, sandboxed)";
     case "about":
